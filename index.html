@@ -90,4 +90,71 @@ textarea::placeholder{color:var(--muted)}
     <div class="result-info">
       <div class="result-label">AI Expanded Prompt</div>
       <div class="result-prompt" id="resultPrompt"></div>
-      <di
+      <div class="result-actions">
+        <a class="action-btn" id="downloadBtn" href="#" download="visualmind.jpg" target="_blank">⬇ Download</a>
+        <button class="action-btn" onclick="generate()">🔄 Regenerate</button>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+const BACKEND = "https://visualmind-five.vercel.app";
+let styles = [];
+let imgW = 1280, imgH = 720;
+
+function togglePill(el, style) {
+  el.classList.toggle("on");
+  if (el.classList.contains("on")) styles.push(style);
+  else styles = styles.filter(s => s !== style);
+}
+
+function setSize(el, w, h) {
+  document.querySelectorAll(".size-btn").forEach(b => b.classList.remove("on"));
+  el.classList.add("on");
+  imgW = w; imgH = h;
+}
+
+function setStatus(type, msg) {
+  const el = document.getElementById("status");
+  el.className = "status " + type;
+  el.textContent = msg;
+}
+
+async function generate() {
+  const prompt = document.getElementById("prompt").value.trim();
+  if (!prompt) { setStatus("err", "Please write a prompt first!"); return; }
+  const btn = document.getElementById("genBtn");
+  const spinner = document.getElementById("spinner");
+  const btnText = document.getElementById("btnText");
+  btn.disabled = true;
+  spinner.style.display = "block";
+  btnText.textContent = "THINKING...";
+  setStatus("", "Claude is expanding your prompt...");
+  document.getElementById("resultCard").style.display = "none";
+  const fullPrompt = styles.length ? `${prompt}. Style: ${styles.join(", ")}` : prompt;
+  try {
+    setStatus("", "Generating your image...");
+    const res = await fetch(`${BACKEND}/api/generate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt: fullPrompt, width: imgW, height: imgH }),
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    document.getElementById("resultPrompt").textContent = data.expanded;
+    const img = document.getElementById("resultImg");
+    img.src = data.imageUrl;
+    img.style.display = "block";
+    document.getElementById("downloadBtn").href = data.imageUrl;
+    document.getElementById("resultCard").style.display = "block";
+    setStatus("ok", "Done! ✓");
+  } catch(e) {
+    setStatus("err", e.message);
+  }
+  btn.disabled = false;
+  spinner.style.display = "none";
+  btnText.textContent = "GENERATE";
+}
+</script>
+</body>
+</html>
