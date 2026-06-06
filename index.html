@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>VisualMind — AI Image Generator</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&display=swap');
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#08080f;--card:#0f0f1a;--border:#1e1e30;--accent:#c8ff00;--accent2:#ff3c78;--text:#f0f0f8;--muted:#52526a}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:48px 20px}
+body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 70% 50% at 10% 0%,rgba(200,255,0,0.05) 0%,transparent 60%),radial-gradient(ellipse 50% 40% at 90% 100%,rgba(255,60,120,0.05) 0%,transparent 60%);pointer-events:none}
+.wrap{width:100%;max-width:680px;position:relative;z-index:1}
+.logo{font-family:'Bebas Neue',sans-serif;font-size:64px;letter-spacing:0.02em;line-height:1;margin-bottom:8px}
+.logo span{color:var(--accent)}
+.tagline{color:var(--muted);font-size:14px;font-weight:300;margin-bottom:48px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:32px;margin-bottom:24px}
+.pill-row{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px}
+.pill{padding:6px 14px;border-radius:100px;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;cursor:pointer;transition:all 0.15s;user-select:none}
+.pill:hover{border-color:var(--accent);color:var(--text)}
+.pill.on{border-color:var(--accent);background:rgba(200,255,0,0.08);color:var(--accent)}
+textarea{width:100%;background:#0a0a14;border:1px solid var(--border);border-radius:12px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:15px;font-weight:300;line-height:1.6;padding:16px;resize:none;min-height:90px;outline:none;transition:border-color 0.2s;margin-bottom:16px}
+textarea:focus{border-color:var(--accent)}
+textarea::placeholder{color:var(--muted)}
+.gen-btn{width:100%;padding:16px;border-radius:12px;border:none;background:var(--accent);color:#08080f;font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:0.08em;cursor:pointer;transition:all 0.2s;display:flex;align-items:center;justify-content:center;gap:10px}
+.gen-btn:hover{transform:translateY(-2px);box-shadow:0 8px 32px rgba(200,255,0,0.25)}
+.gen-btn:disabled{opacity:0.4;cursor:not-allowed;transform:none;box-shadow:none}
+.spinner{width:18px;height:18px;border:2px solid rgba(0,0,0,0.2);border-top-color:#08080f;border-radius:50%;animation:spin 0.7s linear infinite;display:none}
+@keyframes spin{to{transform:rotate(360deg)}}
+.result-card{background:var(--card);border:1px solid var(--border);border-radius:20px;overflow:hidden;display:none;animation:fadeUp 0.4s ease;margin-bottom:24px}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.result-img{width:100%;display:block}
+.result-info{padding:20px}
+.result-label{font-size:10px;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+.result-prompt{font-size:13px;line-height:1.7;color:var(--text);font-weight:300}
+.result-actions{display:flex;gap:8px;margin-top:16px}
+.action-btn{padding:8px 16px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:'DM Sans',sans-serif;font-size:12px;cursor:pointer;transition:all 0.15s;text-decoration:none;display:inline-flex;align-items:center;gap:6px}
+.action-btn:hover{border-color:var(--accent);color:var(--accent)}
+.status{text-align:center;font-size:12px;color:var(--muted);margin-top:12px;min-height:18px}
+.status.ok{color:var(--accent)}
+.status.err{color:var(--accent2)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="logo">Visual<span>Mind</span></div>
+  <div class="tagline">Type a short idea — get a stunning AI image</div>
+  <div class="card">
+    <div class="pill-row">
+      <span class="pill" onclick="togglePill(this,'cinematic')">🎬 Cinematic</span>
+      <span class="pill" onclick="togglePill(this,'photorealistic')">📷 Realistic</span>
+      <span class="pill" onclick="togglePill(this,'anime style')">🌸 Anime</span>
+      <span class="pill" onclick="togglePill(this,'cyberpunk')">🌆 Cyberpunk</span>
+      <span class="pill" onclick="togglePill(this,'fantasy art')">🏰 Fantasy</span>
+      <span class="pill" onclick="togglePill(this,'4K ultra detailed')">✨ Ultra HD</span>
+      <span class="pill" onclick="togglePill(this,'dark moody')">🌑 Dark</span>
+      <span class="pill" onclick="togglePill(this,'golden hour lighting')">🌅 Golden Hour</span>
+    </div>
+    <textarea id="prompt" placeholder="e.g.  woman walking through a neon-lit Tokyo alley at midnight..."></textarea>
+    <button class="gen-btn" id="genBtn" onclick="generate()">
+      <div class="spinner" id="spinner"></div>
+      <span id="btnText">GENERATE</span>
+    </button>
+    <div class="status" id="status"></div>
+  </div>
+  <div class="result-card" id="resultCard">
+    <img class="result-img" id="resultImg" src="" alt="Generated image"/>
+    <div class="result-info">
+      <div class="result-label">AI Expanded Prompt</div>
+      <div class="result-prompt" id="resultPrompt"></div>
+      <div class="result-actions">
+        <a class="action-btn" id="downloadBtn" href="#" download="visualmind.jpg">⬇ Download</a>
+        <button class="action-btn" onclick="generate()">🔄 Regenerate</button>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+const BACKEND = "GANTI_DENGAN_URL_VERCEL_KAMU";
+let styles = [];
+
+function togglePill(el, style) {
+  el.classList.toggle("on");
+  if (el.classList.contains("on")) styles.push(style);
+  else styles = styles.filter(s => s !== style);
+}
+
+function setStatus(type, msg) {
+  const el = document.getElementById("status");
+  el.className = "status " + type;
+  el.textContent = msg;
+}
+
+async function generate() {
+  const prompt = document.getElementById("prompt").value.trim();
+  if (!prompt) { setStatus("err", "Please write a prompt first!"); return; }
+
+  const btn = document.getElementById("genBtn");
+  const spinner = document.getElementById("spinner");
+  const btnText = document.getElementById("btnText");
+  btn.disabled = true;
+  spinner.style.display = "block";
+  btnText.textContent = "THINKING...";
+  setStatus("", "Claude is expanding your prompt...");
+  document.getElementById("resultCard").style.display = "none";
+
+  const fullPrompt = styles.length ? `${prompt}. Style: ${styles.join(", ")}` : prompt;
+
+  try {
+    setStatus("", "Generating your image...");
+    const res = await fetch(`${BACKEND}/api/generate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt: fullPrompt }),
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+
+    document.getElementById("resultPrompt").textContent = data.expanded;
+
+    const imgUrl = data.result?.images?.[0]?.url || data.result?.url || data.result?.output?.[0] || null;
+    const img = document.getElementById("resultImg");
+    if (imgUrl) {
+      img.src = imgUrl;
+      img.style.display = "block";
+      document.getElementById("downloadBtn").href = imgUrl;
+    } else {
+      img.style.display = "none";
+    }
+
+    document.getElementById("resultCard").style.display = "block";
+    setStatus("ok", "Done! ✓");
+  } catch(e) {
+    setStatus("err", e.message);
+  }
+
+  btn.disabled = false;
+  spinner.style.display = "none";
+  btnText.textContent = "GENERATE";
+}
+</script>
+</body>
+</html>
